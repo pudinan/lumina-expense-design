@@ -63,19 +63,19 @@
     <button id="z-in" title="Zoom in">+</button>
     <button id="z-fit" class="fit" title="Fit entire canvas (F)">Fit all</button>
   </div>
-  <div class="meta"><span class="kbd">Ctrl</span>+<span class="kbd">scroll</span> to zoom · <span class="kbd">F</span> to fit all · <span class="kbd">0</span> for 100%</div>
+  <div class="meta"><span class="kbd">Ctrl</span>+<span class="kbd">scroll</span> · <span class="kbd">F</span> · <span class="kbd">0</span></div>
 </header>
 
 <main>
   <div class="stage" id="stage">
     <div class="frame-wrap" id="wrap">
-      <iframe id="frame"></iframe>
+      <iframe id="frame" scrolling="auto"></iframe>
     </div>
   </div>
 </main>
 
 <div class="toolbar" id="toolbar">
-  <button id="t-fit">Fit all</button>
+  <button id="t-fit" class="primary">Fit all</button>
   <button id="t-100">100%</button>
   <button id="t-200">200%</button>
 </div>
@@ -83,10 +83,11 @@
 <div class="hint" id="hint"></div>
 
 <script>
+  // Per-page default dimensions (used as fallback if measurement fails)
   const PAGES = [
-    { name: 'Desktop', icon: '🖥', src: '/latest/desktop.html' },
-    { name: 'Mobile',  icon: '📱', src: '/latest/mobile.html' },
-    { name: 'Employee · Expense Policy', icon: '👤', src: '/latest/employee-policy.html' },
+    { name: 'Desktop', icon: '🖥', src: '/latest/desktop.html',          w: 1400, h: 18000 },
+    { name: 'Mobile',  icon: '📱', src: '/latest/mobile.html',           w: 420,  h: 16000 },
+    { name: 'Employee · Expense Policy', icon: '👤', src: '/latest/employee-policy.html', w: 1400, h: 6000 },
   ];
 
   const frame = document.getElementById('frame');
@@ -99,23 +100,25 @@
 
   let zoom = 100;
   let pageW = 0, pageH = 0;
+  let currentIdx = 0;
 
-  // Build nav from PAGES
+  // Build nav
   PAGES.forEach((p, i) => {
     const btn = document.createElement('button');
-    btn.dataset.idx = i;
     btn.innerHTML = `<span class="icon">${p.icon}</span>${p.name.split(' · ')[0]}`;
     btn.addEventListener('click', () => loadPage(i));
     nav.appendChild(btn);
   });
 
   function applyZoom() {
+    if (!pageW) return;
     wrap.style.transform = `scale(${zoom/100})`;
     wrap.style.width = (pageW * zoom / 100) + 'px';
     wrap.style.height = (pageH * zoom / 100) + 'px';
     label.textContent = zoom + '%';
     slider.value = zoom;
   }
+
   function setZoom(z, autoCenter=true) {
     zoom = Math.max(5, Math.min(200, z));
     applyZoom();
@@ -124,49 +127,58 @@
       const fW = pageW * zoom/100, fH = pageH * zoom/100;
       stage.scrollTo({ left: Math.max(0,(fW-sW)/2), top: Math.max(0,(fH-sH)/2) });
     }
-    localStorage.setItem('zoom_'+currentIdx, zoom);
   }
+
   function fitAll() {
     if (!pageW || !pageH) return;
-    const pad = 24;
+    const pad = 32;
     const sW = stage.clientWidth - pad, sH = stage.clientHeight - pad;
     const scale = Math.min(sW / pageW, sH / pageH);
     setZoom(Math.floor(scale * 100), false);
-    stage.scrollTo({ left: 0, top: 0 });
+    stage.scrollTo({ top: 0, left: 0 });
   }
+
+  // Try to measure actual content (may fail cross-origin)
   function measure() {
     try {
       const doc = frame.contentDocument;
-      const body = doc.body;
-      const html = doc.documentElement;
-      // Use scrollHeight/scrollWidth to capture entire content
-      pageW = Math.max(body.scrollWidth, html.scrollWidth, body.offsetWidth);
-      pageH = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight);
-    } catch (e) {
-      // cross-origin fallback
-      pageW = 1400; pageH = 4000;
-    }
+      if (!doc || !doc.body) return false;
+      const body = doc.body, html = doc.documentElement;
+      const w = Math.max(body.scrollWidth, html.scrollWidth, body.offsetWidth, 0);
+      const h = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight, 0);
+      if (w > 100 && h > 100) {
+        pageW = w; pageH = h;
+        return true;
+      }
+    } catch (e) { /* cross-origin — ignore */ }
+    return false;
   }
+
   function loadPage(idx) {
     currentIdx = idx;
     [...nav.children].forEach((b, i) => b.classList.toggle('active', i === idx));
-    [...toolbar.children].forEach((_, i) => {});
+    // Set defaults immediately so something shows
+    pageW = PAGES[idx].w;
+    pageH = PAGES[idx].h;
+    // Load the iframe
     frame.src = PAGES[idx].src;
   }
 
-  let currentIdx = 0;
+  // After load, try to refine dimensions
   frame.addEventListener('load', () => {
-    // Wait a tick for content to layout
-    setTimeout(() => {
-      measure();
-      const stored = parseInt(localStorage.getItem('zoom_'+currentIdx));
-      if (stored && stored !== 100) setZoom(stored, false);
-      else fitAll();
-      // Center horizontally on fit, scrollable vertically for tall designs
-      if (!stored || stored === 100) {
-        stage.scrollTo({ left: 0, top: 0 });
+    // Try multiple times since the design is JS-heavy
+    let tries = 0;
+    const tryMeasure = () => {
+      tries++;
+      if (measure() || tries >= 5) {
+        const stored = parseInt(localStorage.getItem('zoom_'+currentIdx));
+        if (stored && stored !== 100 && stored > 5) setZoom(stored, false);
+        else fitAll();
+      } else {
+        setTimeout(tryMeasure, 300);
       }
-    }, 50);
+    };
+    setTimeout(tryMeasure, 100);
   });
 
   // Controls
@@ -208,7 +220,7 @@
     });
   });
 
-  // Init
+  // Init — load first page
   loadPage(0);
 </script>
 
