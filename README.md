@@ -24,7 +24,7 @@ Zoom is remembered per page in the browser.
 
 ## Deployment
 
-Upload `index.html` to any static host — it has no other files and needs no server-side code.
+Upload `index.html` to any static host — it has no other files and needs no server-side code. It also works opened straight from disk (double-click / `file://`).
 
 ```bash
 # GitHub Pages: Settings → Pages → Deploy from branch → main → / (root)
@@ -35,7 +35,7 @@ python3 -m http.server 8080   # then open http://localhost:8080
 
 React 18.3.1 is embedded in the file. Only the Poppins / Sarabun fonts and Material Symbols icons load from Google Fonts; without internet the page still works, with system fonts and icon names shown as text.
 
-If the host sets a Content-Security-Policy, it must allow inline scripts, `blob:` frames, and `fonts.googleapis.com` / `fonts.gstatic.com`.
+If the host sets a Content-Security-Policy, it must allow inline scripts, `about:srcdoc` frames, and `fonts.googleapis.com` / `fonts.gstatic.com`.
 
 ## Updating from Claude Design
 

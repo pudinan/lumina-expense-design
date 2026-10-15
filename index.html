@@ -533,7 +533,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     runtime.setRootName(rootName);
     runtime.adoptParsed(rootName, parsed);
     if (!window.__resources) {
-      fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
+      (window.frameElement && typeof window.frameElement.__lmRaw === "string" ? Promise.resolve(window.frameElement.__lmRaw) : fetch(location.href).then((res) => res.ok ? res.text() : "")).then((t) => {
         const raw = t ? parseDcText(t) : null;
         if (raw?.template) runtime.updateHtml(rootName, raw.template);
       }).catch(() => {
@@ -20335,7 +20335,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     runtime.setRootName(rootName);
     runtime.adoptParsed(rootName, parsed);
     if (!window.__resources) {
-      fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
+      (window.frameElement && typeof window.frameElement.__lmRaw === "string" ? Promise.resolve(window.frameElement.__lmRaw) : fetch(location.href).then((res) => res.ok ? res.text() : "")).then((t) => {
         const raw = t ? parseDcText(t) : null;
         if (raw?.template) runtime.updateHtml(rootName, raw.template);
       }).catch(() => {
@@ -27312,7 +27312,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     runtime.setRootName(rootName);
     runtime.adoptParsed(rootName, parsed);
     if (!window.__resources) {
-      fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
+      (window.frameElement && typeof window.frameElement.__lmRaw === "string" ? Promise.resolve(window.frameElement.__lmRaw) : fetch(location.href).then((res) => res.ok ? res.text() : "")).then((t) => {
         const raw = t ? parseDcText(t) : null;
         if (raw?.template) runtime.updateHtml(rootName, raw.template);
       }).catch(() => {
@@ -33111,6 +33111,17 @@ class Component extends DCLogic {
     for (const t of ["keydown", "keyup"]) win.addEventListener(t, onKey, true);
     win.addEventListener("blur", () => setSpace(false));
     bindGestures(win, (e) => [e.clientX, e.clientY]);
+    // In a srcdoc frame "#id" links resolve against the shell's URL and would
+    // load the shell inside the frame; scroll to the target in place instead.
+    doc.addEventListener("click", (e) => {
+      const a = e.target.closest && e.target.closest('a[href^="#"]');
+      if (!a) return;
+      e.preventDefault();
+      const id = decodeURIComponent(a.getAttribute("href").slice(1));
+      const target = id && doc.getElementById(id);
+      if (target) target.scrollIntoView({ block: "start" });
+      else if (!id) scroller().scrollTo({ top: 0 });
+    }, true);
     pan.refresh();
   }
 
@@ -33121,7 +33132,10 @@ class Component extends DCLogic {
     const frame = document.createElement("iframe");
     frame.id = "frame-" + key;
     frame.title = TITLES[key];
-    frame.src = URL.createObjectURL(new Blob([text], { type: "text/html" }));
+    // srcdoc (not a blob: URL) so the frame stays reachable when index.html is
+    // opened straight from disk; __lmRaw feeds the runtime's template re-read.
+    frame.__lmRaw = text;
+    frame.srcdoc = text;
     frame.addEventListener("load", () => attachPan(frame));
     frames.appendChild(frame);
     return (mounted[key] = frame);

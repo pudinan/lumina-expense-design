@@ -5,7 +5,7 @@ Usage: python3 -I build.py <project-folder> [output.html]
 
 Each page is a standalone Design Component document (one <x-dc> per document),
 so every page is built self-contained, embedded as inert text, and mounted into
-its own iframe from a blob: URL when its tab is first opened.
+its own srcdoc iframe when its tab is first opened.
 """
 import base64, functools, hashlib, html as htmllib, json, re, subprocess, sys, tempfile
 from pathlib import Path
@@ -36,6 +36,22 @@ def script_safe(js: str) -> str:
 
 def inline_script(rel: str) -> str:
     return "<script>\n" + script_safe((src / rel).read_text(encoding="utf-8")) + "\n</script>"
+
+
+# After booting, the runtime re-reads its own page source with
+# fetch(location.href) to get the unparsed template. Pages are mounted via
+# iframe srcdoc (blob: frames are unreachable from file:// pages), where that
+# fetch can't work, so the shell hands the source over on the frame element.
+RAW_FETCH = 'fetch(location.href).then((res) => res.ok ? res.text() : "")'
+RAW_FROM_SHELL = ('(window.frameElement && typeof window.frameElement.__lmRaw === "string" '
+                  '? Promise.resolve(window.frameElement.__lmRaw) : ' + RAW_FETCH + ')')
+
+
+def runtime_script() -> str:
+    js = (src / "support.js").read_text(encoding="utf-8")
+    if js.count(RAW_FETCH) != 1:
+        raise SystemExit("support.js: expected exactly one self-fetch to patch")
+    return "<script>\n" + script_safe(js.replace(RAW_FETCH, RAW_FROM_SHELL)) + "\n</script>"
 
 
 # React/ReactDOM are embedded so pages don't need unpkg; the runtime skips its
@@ -81,7 +97,7 @@ def build_page(filename: str) -> str:
     # text; inlined, that copy fails to parse. Load it once from <head> instead.
     sub_once(rf'<script src="{re.escape(DS)}/_ds_bundle\.js"></script>\n?', "")
     sub_once(r'<script src="\./support\.js"></script>',
-             react_scripts() + "\n" + inline_script("support.js") + "\n" + inline_script(f"{DS}/_ds_bundle.js"))
+             react_scripts() + "\n" + runtime_script() + "\n" + inline_script(f"{DS}/_ds_bundle.js"))
 
     # styles.css only @imports the token files, which are inlined individually.
     sub_once(rf'<link rel="stylesheet" href="{re.escape(DS)}/styles\.css">\n?', "")
@@ -211,6 +227,17 @@ PAN_JS = r"""
     for (const t of ["keydown", "keyup"]) win.addEventListener(t, onKey, true);
     win.addEventListener("blur", () => setSpace(false));
     bindGestures(win, (e) => [e.clientX, e.clientY]);
+    // In a srcdoc frame "#id" links resolve against the shell's URL and would
+    // load the shell inside the frame; scroll to the target in place instead.
+    doc.addEventListener("click", (e) => {
+      const a = e.target.closest && e.target.closest('a[href^="#"]');
+      if (!a) return;
+      e.preventDefault();
+      const id = decodeURIComponent(a.getAttribute("href").slice(1));
+      const target = id && doc.getElementById(id);
+      if (target) target.scrollIntoView({ block: "start" });
+      else if (!id) scroller().scrollTo({ top: 0 });
+    }, true);
     pan.refresh();
   }
 """
@@ -351,7 +378,10 @@ shell = f"""<!DOCTYPE html>
     const frame = document.createElement("iframe");
     frame.id = "frame-" + key;
     frame.title = TITLES[key];
-    frame.src = URL.createObjectURL(new Blob([text], {{ type: "text/html" }}));
+    // srcdoc (not a blob: URL) so the frame stays reachable when index.html is
+    // opened straight from disk; __lmRaw feeds the runtime's template re-read.
+    frame.__lmRaw = text;
+    frame.srcdoc = text;
     frame.addEventListener("load", () => attachPan(frame));
     frames.appendChild(frame);
     return (mounted[key] = frame);
