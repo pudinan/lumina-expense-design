@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Lumina Expense — Latest</title>
+<title>Lumina Expense — Canvas Overview</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { height:100%; }
-  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#faf9f5; color:#222; display:flex; flex-direction:column; }
-  header { background:#fff; border-bottom:1px solid #e5e5e5; padding:0 24px; display:flex; align-items:center; gap:24px; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  html, body { height:100%; overflow:hidden; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#e7e7e7; color:#222; display:flex; flex-direction:column; }
+  header { background:#fff; border-bottom:1px solid #d4d3d5; padding:0 24px; display:flex; align-items:center; gap:24px; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.04); z-index:2; }
   .brand { display:flex; align-items:center; gap:12px; padding:14px 0; border-right:1px solid #e5e5e5; padding-right:24px; }
   .brand-mark { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#529bc9 0%,#26587e 100%); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; font-size:14px; }
   .brand-text { display:flex; flex-direction:column; }
@@ -23,17 +23,25 @@
   .zoom button { background:#fff; border:1px solid #d4d3d5; width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:14px; color:#565459; display:flex; align-items:center; justify-content:center; }
   .zoom button:hover { background:#faf9f5; }
   .zoom input[type=range] { width:120px; accent-color:#529bc9; }
-  .zoom .label { font:600 12px/1 var(--font-mono,monospace); color:#565459; min-width:42px; text-align:center; }
-  .zoom .fit { background:#26587e; color:#fff; border-color:#26587e; padding:0 10px; font:600 12px/1 var(--font-sans,inherit); width:auto; }
+  .zoom .label { font:600 12px/1 ui-monospace,monospace; color:#565459; min-width:42px; text-align:center; }
+  .zoom .fit { background:#26587e; color:#fff; border-color:#26587e; padding:0 10px; font:600 12px/1 inherit; width:auto; }
   .zoom .fit:hover { background:#1d4663; }
   .meta { font-size:12px; color:#999; padding:0 12px; }
+
   main { flex:1; min-height:0; display:flex; overflow:hidden; }
-  .stage { flex:1; position:relative; overflow:auto; background:#e7e7e7; }
-  .frame-wrap { position:absolute; top:0; left:0; transform-origin:0 0; transition:transform .12s; }
-  iframe { display:block; border:0; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.12); }
-  .hint { position:fixed; bottom:12px; right:12px; background:rgba(0,0,0,.75); color:#fff; font:500 12px/1.4 -apple-system,sans-serif; padding:8px 12px; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .3s; max-width:280px; }
+  .stage { flex:1; position:relative; overflow:auto; background:#d4d3d5; background-image:linear-gradient(45deg,#cfcfcf 25%,transparent 25%),linear-gradient(-45deg,#cfcfcf 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#cfcfcf 75%),linear-gradient(-45deg,transparent 75%,#cfcfcf 75%); background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0; }
+  .frame-wrap { position:absolute; top:0; left:0; transform-origin:0 0; }
+  iframe { display:block; border:0; background:#fff; box-shadow:0 8px 40px rgba(0,0,0,.18); }
+
+  .toolbar { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.95); backdrop-filter:blur(8px); border-radius:10px; padding:6px; box-shadow:0 4px 20px rgba(0,0,0,.12); display:flex; gap:2px; z-index:3; }
+  .toolbar button { background:transparent; border:0; padding:8px 14px; border-radius:6px; font:500 13px/1 inherit; color:#565459; cursor:pointer; }
+  .toolbar button:hover { background:#f4f6f7; }
+  .toolbar button.primary { background:#26587e; color:#fff; }
+  .toolbar button.primary:hover { background:#1d4663; }
+
+  .hint { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.85); color:#fff; font:500 13px/1.4 -apple-system,sans-serif; padding:10px 14px; border-radius:8px; pointer-events:none; opacity:0; transition:opacity .25s; z-index:4; }
   .hint.show { opacity:1; }
-  .kbd { background:rgba(255,255,255,.2); padding:1px 5px; border-radius:3px; font:500 11px/1 ui-monospace,monospace; }
+  .kbd { background:rgba(255,255,255,.18); padding:2px 6px; border-radius:4px; font:500 11px/1 ui-monospace,monospace; }
 </style>
 </head>
 <body>
@@ -43,91 +51,134 @@
     <div class="brand-mark">L</div>
     <div class="brand-text">
       <div class="name">Lumina Expense</div>
-      <div class="tag">Terra TDV · 3 pages · latest</div>
+      <div class="tag">Terra TDV · canvas overview</div>
     </div>
   </div>
-  <nav>
-    <button class="active" data-src="/latest/desktop.html" data-w="1400"><span class="icon">🖥</span>Desktop</button>
-    <button data-src="/latest/mobile.html" data-w="420"><span class="icon">📱</span>Mobile</button>
-    <button data-src="/latest/employee-policy.html" data-w="1400"><span class="icon">👤</span>Employee · Expense Policy</button>
-  </nav>
+  <nav id="nav"></nav>
   <div class="grow"></div>
   <div class="zoom">
-    <button id="z-out" title="Zoom out (Ctrl+-)">−</button>
-    <input id="z-slider" type="range" min="20" max="200" value="100">
+    <button id="z-out" title="Zoom out">−</button>
+    <input id="z-slider" type="range" min="5" max="200" value="100">
     <span id="z-label" class="label">100%</span>
-    <button id="z-in" title="Zoom in (Ctrl+=)">+</button>
-    <button id="z-fit" class="fit" title="Fit to width (F)">Fit</button>
-    <button id="z-100" class="fit" title="Reset to 100% (0)">100</button>
+    <button id="z-in" title="Zoom in">+</button>
+    <button id="z-fit" class="fit" title="Fit entire canvas (F)">Fit all</button>
   </div>
-  <div class="meta">scroll inside to navigate · <span class="kbd">Ctrl</span>+<span class="kbd">scroll</span> to zoom</div>
+  <div class="meta"><span class="kbd">Ctrl</span>+<span class="kbd">scroll</span> to zoom · <span class="kbd">F</span> to fit all · <span class="kbd">0</span> for 100%</div>
 </header>
 
 <main>
   <div class="stage" id="stage">
     <div class="frame-wrap" id="wrap">
-      <iframe id="frame" src="/latest/desktop.html" width="1400" height="900"></iframe>
+      <iframe id="frame"></iframe>
     </div>
   </div>
 </main>
 
+<div class="toolbar" id="toolbar">
+  <button id="t-fit">Fit all</button>
+  <button id="t-100">100%</button>
+  <button id="t-200">200%</button>
+</div>
+
 <div class="hint" id="hint"></div>
 
 <script>
+  const PAGES = [
+    { name: 'Desktop', icon: '🖥', src: '/latest/desktop.html' },
+    { name: 'Mobile',  icon: '📱', src: '/latest/mobile.html' },
+    { name: 'Employee · Expense Policy', icon: '👤', src: '/latest/employee-policy.html' },
+  ];
+
   const frame = document.getElementById('frame');
   const wrap = document.getElementById('wrap');
   const stage = document.getElementById('stage');
   const slider = document.getElementById('z-slider');
   const label = document.getElementById('z-label');
-  const nav = document.querySelectorAll('nav button');
+  const nav = document.getElementById('nav');
   const hint = document.getElementById('hint');
 
   let zoom = 100;
-  let pageW = 1400;
+  let pageW = 0, pageH = 0;
+
+  // Build nav from PAGES
+  PAGES.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.dataset.idx = i;
+    btn.innerHTML = `<span class="icon">${p.icon}</span>${p.name.split(' · ')[0]}`;
+    btn.addEventListener('click', () => loadPage(i));
+    nav.appendChild(btn);
+  });
 
   function applyZoom() {
     wrap.style.transform = `scale(${zoom/100})`;
     wrap.style.width = (pageW * zoom / 100) + 'px';
-    wrap.style.height = (frame.height * zoom / 100) + 'px';
+    wrap.style.height = (pageH * zoom / 100) + 'px';
     label.textContent = zoom + '%';
     slider.value = zoom;
   }
-  function setZoom(z, center=false) {
-    zoom = Math.max(20, Math.min(200, z));
+  function setZoom(z, autoCenter=true) {
+    zoom = Math.max(5, Math.min(200, z));
     applyZoom();
-    if (center) {
+    if (autoCenter) {
       const sW = stage.clientWidth, sH = stage.clientHeight;
-      const fW = pageW * zoom/100, fH = frame.height * zoom/100;
-      stage.scrollTo({ left: Math.max(0,(fW-sW)/2), top: Math.max(0,(fH-sH)/2), behavior:'smooth' });
+      const fW = pageW * zoom/100, fH = pageH * zoom/100;
+      stage.scrollTo({ left: Math.max(0,(fW-sW)/2), top: Math.max(0,(fH-sH)/2) });
     }
-    localStorage.setItem('zoom', zoom);
+    localStorage.setItem('zoom_'+currentIdx, zoom);
   }
-  function fit() {
-    const sW = stage.clientWidth - 32;
-    setZoom(Math.floor((sW / pageW) * 100));
+  function fitAll() {
+    if (!pageW || !pageH) return;
+    const pad = 24;
+    const sW = stage.clientWidth - pad, sH = stage.clientHeight - pad;
+    const scale = Math.min(sW / pageW, sH / pageH);
+    setZoom(Math.floor(scale * 100), false);
+    stage.scrollTo({ left: 0, top: 0 });
+  }
+  function measure() {
+    try {
+      const doc = frame.contentDocument;
+      const body = doc.body;
+      const html = doc.documentElement;
+      // Use scrollHeight/scrollWidth to capture entire content
+      pageW = Math.max(body.scrollWidth, html.scrollWidth, body.offsetWidth);
+      pageH = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight);
+    } catch (e) {
+      // cross-origin fallback
+      pageW = 1400; pageH = 4000;
+    }
+  }
+  function loadPage(idx) {
+    currentIdx = idx;
+    [...nav.children].forEach((b, i) => b.classList.toggle('active', i === idx));
+    [...toolbar.children].forEach((_, i) => {});
+    frame.src = PAGES[idx].src;
+  }
+
+  let currentIdx = 0;
+  frame.addEventListener('load', () => {
+    // Wait a tick for content to layout
     setTimeout(() => {
-      const fH = frame.height * zoom/100;
-      stage.scrollTo({ top: 0 });
+      measure();
+      const stored = parseInt(localStorage.getItem('zoom_'+currentIdx));
+      if (stored && stored !== 100) setZoom(stored, false);
+      else fitAll();
+      // Center horizontally on fit, scrollable vertically for tall designs
+      if (!stored || stored === 100) {
+        stage.scrollTo({ left: 0, top: 0 });
+      }
     }, 50);
-  }
+  });
 
-  // Tab switching
-  nav.forEach(b => b.addEventListener('click', () => {
-    nav.forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    frame.src = b.dataset.src;
-    pageW = parseInt(b.dataset.w) || 1400;
-    setZoom(parseInt(localStorage.getItem('zoom')) || 100);
-  }));
-
-  // Zoom controls
-  document.getElementById('z-in').onclick = () => setZoom(zoom + 10, true);
-  document.getElementById('z-out').onclick = () => setZoom(zoom - 10, true);
-  document.getElementById('z-fit').onclick = () => fit();
-  document.getElementById('z-100').onclick = () => setZoom(100, true);
+  // Controls
+  document.getElementById('z-in').onclick = () => setZoom(zoom + 15);
+  document.getElementById('z-out').onclick = () => setZoom(zoom - 15);
+  document.getElementById('z-fit').onclick = () => fitAll();
+  document.getElementById('t-fit').onclick = () => fitAll();
+  document.getElementById('t-100').onclick = () => setZoom(100);
+  document.getElementById('t-200').onclick = () => setZoom(200);
   slider.oninput = e => setZoom(parseInt(e.target.value));
 
-  // Ctrl+scroll to zoom
+  // Ctrl+scroll = zoom
   stage.addEventListener('wheel', e => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -135,32 +186,30 @@
     }
   }, { passive: false });
 
-  // Keyboard shortcuts
+  // Keyboard
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
-    if (e.key === 'f' || e.key === 'F') fit();
-    else if (e.key === '0') setZoom(100, true);
-    else if ((e.ctrlKey||e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(zoom+10, true); }
-    else if ((e.ctrlKey||e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(zoom-10, true); }
+    if (e.key === 'f' || e.key === 'F') fitAll();
+    else if (e.key === '0') setZoom(100);
+    else if ((e.ctrlKey||e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(zoom+15); }
+    else if ((e.ctrlKey||e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(zoom-15); }
   });
 
-  // Hint
   function showHint(text) {
     hint.textContent = text;
     hint.classList.add('show');
     clearTimeout(hint._t);
-    hint._t = setTimeout(() => hint.classList.remove('show'), 1500);
+    hint._t = setTimeout(() => hint.classList.remove('show'), 1800);
   }
-  ['z-in','z-out','z-fit','z-100'].forEach(id => {
+  ['z-in','z-out','z-fit','t-fit','t-100','t-200'].forEach(id => {
     document.getElementById(id).addEventListener('click', () => {
-      const labels = { 'z-in':'Zoom in', 'z-out':'Zoom out', 'z-fit':'Fit to width', 'z-100':'Reset to 100%' };
+      const labels = { 'z-in':'Zoom in', 'z-out':'Zoom out', 'z-fit':'Fit entire canvas', 't-fit':'Fit all', 't-100':'100%', 't-200':'200%' };
       showHint(labels[id]);
     });
   });
 
   // Init
-  const stored = parseInt(localStorage.getItem('zoom'));
-  setZoom(stored || 100);
+  loadPage(0);
 </script>
 
 </body>
