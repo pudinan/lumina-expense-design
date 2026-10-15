@@ -7,21 +7,33 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; }
   body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#faf9f5; color:#222; display:flex; flex-direction:column; }
-  header { background:#fff; border-bottom:1px solid #e5e5e5; padding:0 32px; display:flex; align-items:center; gap:32px; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-  .brand { display:flex; align-items:center; gap:12px; padding:16px 0; border-right:1px solid #e5e5e5; padding-right:32px; }
+  header { background:#fff; border-bottom:1px solid #e5e5e5; padding:0 24px; display:flex; align-items:center; gap:24px; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .brand { display:flex; align-items:center; gap:12px; padding:14px 0; border-right:1px solid #e5e5e5; padding-right:24px; }
   .brand-mark { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#529bc9 0%,#26587e 100%); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; font-size:14px; }
   .brand-text { display:flex; flex-direction:column; }
   .brand-text .name { font-size:15px; font-weight:600; line-height:1.2; }
   .brand-text .tag { font-size:11px; color:#888; line-height:1.2; }
   nav { display:flex; gap:4px; }
-  nav button { background:transparent; border:0; padding:20px 16px; font:500 14px/1 inherit; color:#666; cursor:pointer; border-bottom:2px solid transparent; transition:color .15s, border-color .15s; display:flex; align-items:center; gap:8px; }
+  nav button { background:transparent; border:0; padding:18px 14px; font:500 14px/1 inherit; color:#666; cursor:pointer; border-bottom:2px solid transparent; transition:color .15s, border-color .15s; display:flex; align-items:center; gap:8px; }
   nav button:hover { color:#222; }
   nav button.active { color:#26587e; border-bottom-color:#529bc9; font-weight:600; }
   nav button .icon { font-size:18px; }
   .grow { flex:1; }
-  .meta { font-size:12px; color:#999; padding:0 16px; }
-  main { flex:1; min-height:0; display:flex; }
-  iframe { flex:1; border:0; background:#fff; }
+  .zoom { display:flex; align-items:center; gap:6px; padding:8px 12px; background:#f4f6f7; border-radius:8px; }
+  .zoom button { background:#fff; border:1px solid #d4d3d5; width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:14px; color:#565459; display:flex; align-items:center; justify-content:center; }
+  .zoom button:hover { background:#faf9f5; }
+  .zoom input[type=range] { width:120px; accent-color:#529bc9; }
+  .zoom .label { font:600 12px/1 var(--font-mono,monospace); color:#565459; min-width:42px; text-align:center; }
+  .zoom .fit { background:#26587e; color:#fff; border-color:#26587e; padding:0 10px; font:600 12px/1 var(--font-sans,inherit); width:auto; }
+  .zoom .fit:hover { background:#1d4663; }
+  .meta { font-size:12px; color:#999; padding:0 12px; }
+  main { flex:1; min-height:0; display:flex; overflow:hidden; }
+  .stage { flex:1; position:relative; overflow:auto; background:#e7e7e7; }
+  .frame-wrap { position:absolute; top:0; left:0; transform-origin:0 0; transition:transform .12s; }
+  iframe { display:block; border:0; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.12); }
+  .hint { position:fixed; bottom:12px; right:12px; background:rgba(0,0,0,.75); color:#fff; font:500 12px/1.4 -apple-system,sans-serif; padding:8px 12px; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .3s; max-width:280px; }
+  .hint.show { opacity:1; }
+  .kbd { background:rgba(255,255,255,.2); padding:1px 5px; border-radius:3px; font:500 11px/1 ui-monospace,monospace; }
 </style>
 </head>
 <body>
@@ -35,26 +47,120 @@
     </div>
   </div>
   <nav>
-    <button class="active" data-src="/latest/desktop.html"><span class="icon">🖥</span>Desktop</button>
-    <button data-src="/latest/mobile.html"><span class="icon">📱</span>Mobile</button>
-    <button data-src="/latest/employee-policy.html"><span class="icon">👤</span>Employee · Expense Policy</button>
+    <button class="active" data-src="/latest/desktop.html" data-w="1400"><span class="icon">🖥</span>Desktop</button>
+    <button data-src="/latest/mobile.html" data-w="420"><span class="icon">📱</span>Mobile</button>
+    <button data-src="/latest/employee-policy.html" data-w="1400"><span class="icon">👤</span>Employee · Expense Policy</button>
   </nav>
   <div class="grow"></div>
-  <div class="meta">3 pages · standalone · self-contained</div>
+  <div class="zoom">
+    <button id="z-out" title="Zoom out (Ctrl+-)">−</button>
+    <input id="z-slider" type="range" min="20" max="200" value="100">
+    <span id="z-label" class="label">100%</span>
+    <button id="z-in" title="Zoom in (Ctrl+=)">+</button>
+    <button id="z-fit" class="fit" title="Fit to width (F)">Fit</button>
+    <button id="z-100" class="fit" title="Reset to 100% (0)">100</button>
+  </div>
+  <div class="meta">scroll inside to navigate · <span class="kbd">Ctrl</span>+<span class="kbd">scroll</span> to zoom</div>
 </header>
 
 <main>
-  <iframe id="frame" src="/latest/desktop.html"></iframe>
+  <div class="stage" id="stage">
+    <div class="frame-wrap" id="wrap">
+      <iframe id="frame" src="/latest/desktop.html" width="1400" height="900"></iframe>
+    </div>
+  </div>
 </main>
 
+<div class="hint" id="hint"></div>
+
 <script>
-  const nav = document.querySelectorAll('nav button');
   const frame = document.getElementById('frame');
+  const wrap = document.getElementById('wrap');
+  const stage = document.getElementById('stage');
+  const slider = document.getElementById('z-slider');
+  const label = document.getElementById('z-label');
+  const nav = document.querySelectorAll('nav button');
+  const hint = document.getElementById('hint');
+
+  let zoom = 100;
+  let pageW = 1400;
+
+  function applyZoom() {
+    wrap.style.transform = `scale(${zoom/100})`;
+    wrap.style.width = (pageW * zoom / 100) + 'px';
+    wrap.style.height = (frame.height * zoom / 100) + 'px';
+    label.textContent = zoom + '%';
+    slider.value = zoom;
+  }
+  function setZoom(z, center=false) {
+    zoom = Math.max(20, Math.min(200, z));
+    applyZoom();
+    if (center) {
+      const sW = stage.clientWidth, sH = stage.clientHeight;
+      const fW = pageW * zoom/100, fH = frame.height * zoom/100;
+      stage.scrollTo({ left: Math.max(0,(fW-sW)/2), top: Math.max(0,(fH-sH)/2), behavior:'smooth' });
+    }
+    localStorage.setItem('zoom', zoom);
+  }
+  function fit() {
+    const sW = stage.clientWidth - 32;
+    setZoom(Math.floor((sW / pageW) * 100));
+    setTimeout(() => {
+      const fH = frame.height * zoom/100;
+      stage.scrollTo({ top: 0 });
+    }, 50);
+  }
+
+  // Tab switching
   nav.forEach(b => b.addEventListener('click', () => {
     nav.forEach(x => x.classList.remove('active'));
     b.classList.add('active');
     frame.src = b.dataset.src;
+    pageW = parseInt(b.dataset.w) || 1400;
+    setZoom(parseInt(localStorage.getItem('zoom')) || 100);
   }));
+
+  // Zoom controls
+  document.getElementById('z-in').onclick = () => setZoom(zoom + 10, true);
+  document.getElementById('z-out').onclick = () => setZoom(zoom - 10, true);
+  document.getElementById('z-fit').onclick = () => fit();
+  document.getElementById('z-100').onclick = () => setZoom(100, true);
+  slider.oninput = e => setZoom(parseInt(e.target.value));
+
+  // Ctrl+scroll to zoom
+  stage.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setZoom(zoom + (e.deltaY < 0 ? 10 : -10));
+    }
+  }, { passive: false });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'f' || e.key === 'F') fit();
+    else if (e.key === '0') setZoom(100, true);
+    else if ((e.ctrlKey||e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(zoom+10, true); }
+    else if ((e.ctrlKey||e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(zoom-10, true); }
+  });
+
+  // Hint
+  function showHint(text) {
+    hint.textContent = text;
+    hint.classList.add('show');
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => hint.classList.remove('show'), 1500);
+  }
+  ['z-in','z-out','z-fit','z-100'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => {
+      const labels = { 'z-in':'Zoom in', 'z-out':'Zoom out', 'z-fit':'Fit to width', 'z-100':'Reset to 100%' };
+      showHint(labels[id]);
+    });
+  });
+
+  // Init
+  const stored = parseInt(localStorage.getItem('zoom'));
+  setZoom(stored || 100);
 </script>
 
 </body>
